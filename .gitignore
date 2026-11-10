@@ -15,3 +15,15 @@ thumbs.db
 video/assets/m3_desktop_raw.mp4
 video/assets/frames_*/
 video/assets/m3_ffmpeg.*
+
+# video render intermediates / QA frames
+video/__pycache__/
+video/assets/_film/
+video/assets/seg_*.mp4
+video/assets/v_*.jpg
+video/assets/check_*.jpg
+video/assets/f_*.jpg
+video/assets/g_*.jpg
+video/assets/_m3frame.jpg
+video/assets/m7_ci_raw.png
+video/assets/narration/*.wav

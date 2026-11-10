@@ -63,3 +63,45 @@ driver 时间线在 `video/m3_driver.js` 里改，日志写在 `<game>\m3.log`�
 - 窗口坐标必须 DPI-aware：不调 `SetProcessDPIAware` 会拿到 80% 的逻辑坐标（本机 125% 缩放），裁出来的画面全是偏移的
 - PowerShell 5.1 里 `$ErrorActionPreference = "Stop"` 会把 ffmpeg 的 stderr 当异常抛，调 ffmpeg 前后要临时改 `Continue`
 - `Set-Content -Encoding UTF8` 在 PS5.1 会写 BOM，所以 `index.html` 的备份/恢复用 `.bak-m3`，不要靠 diff 还原
+
+## 成片（86.6 秒，7 段全合成）
+
+```bash
+python video/make_film.py            # 重渲全部分段（m1 m2 m3 m4 m5 m6 m7）
+python video/make_film.py m1 m2 m4   # 只重渲指定段，其余复用 assets/seg_*.mp4
+python video/make_film.py assemble   # 只做拼接 + 混音 + 封装（秒级）
+```
+
+成片：`assets/tt_chatchoice_film.mp4` —— 1920×1080 / 30fps / AAC 44.1kHz / 86.57s / 约 3.7 MB。
+
+**段长公式**：`段长 = 该段旁白 wav 时长 + 0.5s`（M3、M6 取 `max(素材时长, 旁白 + 0.5)`）。
+旁白在 `assets/narration/n1..n7.wav`，文案在 `assets/narration/lines.json`；重新生成旁白：
+
+```powershell
+# 本机可用的中文语音：Microsoft Huihui Desktop / Kangkang / Yaoyao
+Add-Type -AssemblyName System.Speech
+$s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+$s.SelectVoice('Microsoft Huihui Desktop')
+$s.Rate = 0
+$s.SetOutputToWaveFile('video\assets\narration\n3.wav')
+$s.Speak('真实游戏里，选项弹出来的那一刻，插件就接管了。')
+$s.Dispose()
+```
+
+改完某段旁白后：`python make_film.py assemble` 会自动按新时长重排（分段视频不会自动变长，
+需要重渲对应段：`python make_film.py m3`）。混音链路：每段旁白按段起点 `adelay` →
+`amix` → `highpass` → `compressor` → `afade` → `apad` → `volume=2.4`。
+
+**分段与素材对照**
+
+| 段 | 秒数 | 画面来源 |
+| --- | --- | --- |
+| m1 痛点 | 9.04 | PIL 自绘 RPG 对话框（4 个固定选项依次灰掉） |
+| m2 接管 | 10.12 | `shots/chat-open.png` / `chat-confirm.png` / `chat-applied.png` 底部条带 |
+| m3 实机 | 16.2 | `assets/m3_omori.mp4` + `shots/omori-layout-dragged.png` 尾卡 |
+| m4 兜底 | 15.11 | `shots/chat-candidates.png` / `chat-retry.png` + 自绘卡 |
+| m5 安装 | 11.99 | PIL 自绘 PowerShell 终端（逐行输出） |
+| m6 思考 | 14.5 | `assets/m6_thinking.mp4` 拉伸铺满 |
+| m7 CI+片尾 | 9.65 | `assets/m7_ci.png` + 右侧片尾卡（GitHub URL / 49 项测试 / MIT） |
+
+分段中间文件在 `assets/seg_*.mp4`、`assets/_film/`，都不进 git。
