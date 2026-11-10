@@ -11,16 +11,16 @@ permissions:
 
 jobs:
   test:
-    name: node test (20)
+    name: node test (24)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Set up Node 20
-        uses: actions/setup-node@v4
+      - name: Set up Node 24
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Syntax check
         run: node --check js/plugins/TT_ChatChoice.js
