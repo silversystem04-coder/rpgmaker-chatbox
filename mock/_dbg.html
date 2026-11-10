@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>dbg</title></head>
+<body>
+<pre id="out">start</pre>
+<script>
+  window.$gameMessage = {
+    _texts: ['hi'],
+    _choices: ['A', 'B'],
+    choices: function () { return this._choices; },
+    isChoice: function () { return true; },
+    onChoice: function (i) { document.getElementById('out').textContent += ' ONCHOICE ' + i; }
+  };
+  function Window_ChoiceList() { this._index = 0; this.active = true; this._visible = true; this.visible = true; }
+  Window_ChoiceList.prototype.update = function () {};
+  Window_ChoiceList.prototype.index = function () { return this._index; };
+  Window_ChoiceList.prototype.maxItems = function () { return this.$gameMessage || 2; };
+  Window_ChoiceList.prototype.select = function (i) { this._index = i; };
+  Window_ChoiceList.prototype.callOkHandler = function () {};
+  Window_ChoiceList.prototype.refresh = function () {};
+  Window_ChoiceList.prototype.open = function () {};
+  window.SceneManager = { _scene: null };
+</script>
+<script src="../js/plugins/TT_ChatChoice.js"></script>
+<script>
+  var out = document.getElementById('out');
+  try {
+    var win = new Window_ChoiceList();
+    SceneManager._scene = { _choiceWindow: win };
+    TT_ChatChoice._show(win);
+    out.textContent += '\nSHOW_OK root=' + !!document.getElementById('tt-chat-root') + ' html=' + (document.getElementById('tt-chat-root') || {}).outerHTML;
+  } catch (e) {
+    out.textContent += '\nERR ' + e.message + '\n' + (e.stack || '');
+  }
+</script>
+</body></html>

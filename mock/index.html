@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>TT_ChatChoice · 无游戏模拟器</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #05070a; color: #cfe3f5;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif; height: 100%; }
+  #wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 120px; }
+  h1 { font-size: 16px; color: #7fd4ff; font-weight: normal; letter-spacing: 1px; margin: 0 0 10px; }
+  #game { position: relative; width: 100%; aspect-ratio: 16 / 9; background:
+    radial-gradient(circle at 50% 30%, #1b2330 0%, #0a0d12 70%);
+    border: 1px solid #1d2a38; border-radius: 8px; overflow: hidden; }
+  #dialogue { position: absolute; left: 6%; right: 6%; bottom: 6%; min-height: 92px;
+    background: rgba(8, 10, 16, .88); border: 1px solid #26384a; border-radius: 8px;
+    padding: 14px 16px; font-size: 15px; line-height: 1.7; color: #dfeaf6; }
+  #speaker { color: #ffd479; font-size: 13px; margin-bottom: 4px; }
+  #choice-window { position: absolute; right: 7%; bottom: 32%; width: 260px; display: none;
+    background: rgba(10, 14, 20, .92); border: 1px solid #3a5a78; border-radius: 8px; padding: 8px; }
+  #choice-window div { padding: 7px 10px; font-size: 14px; color: #bcd6ea; }
+  #choice-window div:first-child { color: #fff; background: rgba(90, 170, 255, .16); border-radius: 5px; }
+  #panel { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { background: #16222e; border: 1px solid #2e4a63; color: #9fd3f5; border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; cursor: pointer; }
+  button:hover { background: #1d2f40; }
+  #log { margin-top: 10px; font-size: 12px; color: #6f8ba0; white-space: pre-wrap; line-height: 1.7;
+    min-height: 40px; border-top: 1px dashed #1a2836; padding-top: 8px; }
+  #hint { font-size: 12px; color: #4f6a7d; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>TT_ChatChoice v0.1.4 · 无游戏模拟器</h1>
+  <div id="game">
+    <div id="dialogue">
+      <div id="speaker">旁白</div>
+      <div id="text">点下面的按钮，模拟游戏里弹出一个对话选项。</div>
+    </div>
+    <div id="choice-window"></div>
+  </div>
+
+  <div id="panel">
+    <button data-case="yesno">触发：是 / 否</button>
+    <button data-case="three">触发：三个选项</button>
+    <button data-case="four">触发：四个模糊选项</button>
+    <button data-case="ordinal">触发：序数测试</button>
+  </div>
+  <div id="hint">
+    聊天框出现后：Enter 发送；再按 Enter 确认；Esc 用原选项。F9 开关插件。<br>
+    聊天框：拖标题栏移动、拖右下角缩放、⇅ 上下停靠、⟲ 复位；位置会记住。
+  </div>
+  <div id="log"></div>
+</div>
+
+<script>
+/* =========================================================
+ * 假 MV 运行时：只实现插件用到的最小接口
+ * ========================================================= */
+var $gameMessage = {
+  _texts: [],
+  _choices: [],
+  choices: function () { return this._choices; },
+  isChoice: function () { return this._choices.length > 0; },
+  onChoice: function (i) {
+    var picked = this._choices[i];
+    gameLog('✅ 游戏收到选择  index=' + i + ' → 「' + picked + '」');
+    this._choices = [];
+    this._texts = [];
+    renderDialogue('（剧情继续……）');
+    hideChoiceBox();
+  }
+};
+
+var SceneManager = { _scene: null };
+
+function Window_ChoiceList() {
+  this._index = 0;
+  this.active = false;
+  this._visible = false;
+  var self = this;
+  Object.defineProperty(this, 'visible', {
+    get: function () { return self._visible; },
+    set: function (v) { self._visible = !!v; if (self.el) self.el.style.display = self._visible ? 'block' : 'none'; }
+  });
+}
+Window_ChoiceList.prototype.update = function () { /* 真实游戏里这里是光标闪烁 */ };
+Window_ChoiceList.prototype.index = function () { return this._index; };
+Window_ChoiceList.prototype.maxItems = function () { return $gameMessage.choices().length; };
+Window_ChoiceList.prototype.select = function (i) { this._index = i; };
+Window_ChoiceList.prototype.callOkHandler = function () {
+  $gameMessage.onChoice(this.index());
+  this.active = false;
+  this.visible = false;
+};
+
+var choiceWin = new Window_ChoiceList();
+choiceWin.el = document.getElementById('choice-window');
+SceneManager._scene = { _choiceWindow: choiceWin };
+
+/* =========================================================
+ * 假游戏 UI
+ * ========================================================= */
+var CASES = {
+  yesno: {
+    speaker: '莫妮卡',
+    text: '「你要不要进来坐坐？」',
+    choices: ['好，我进去', '不了，我先走了']
+  },
+  three: {
+    speaker: '？？？',
+    text: '「你想怎么回答他？」',
+    choices: ['答应他', '拒绝他', '什么都不说']
+  },
+  four: {
+    speaker: '奥布里',
+    text: '「你到底站哪边？」',
+    choices: ['我站在你这边', '我觉得你错了', '我不想掺和', '让我再想想']
+  },
+  ordinal: {
+    speaker: '旁白',
+    text: '「（选择一项）」',
+    choices: ['向左走', '向右走', '留在原地']
+  }
+};
+
+function renderDialogue(text) {
+  document.getElementById('text').textContent = text;
+}
+
+function hideChoiceBox() {
+  choiceWin.el.style.display = 'none';
+  choiceWin.el.textContent = '';
+}
+
+function startChoice(caseId) {
+  var c = CASES[caseId] || CASES.three;
+  $gameMessage._texts = [c.text];
+  $gameMessage._choices = c.choices.slice();
+  renderDialogue(c.text);
+  document.getElementById('speaker').textContent = c.speaker;
+
+  var box = choiceWin.el;
+  box.textContent = '';
+  for (var i = 0; i < c.choices.length; i++) {
+    var d = document.createElement('div');
+    d.textContent = (i + 1) + '. ' + c.choices[i];
+    box.appendChild(d);
+  }
+  choiceWin.active = true;
+  choiceWin.visible = true;
+  gameLog('🎮 游戏弹出选项：' + c.choices.join(' / '));
+}
+
+function gameLog(msg) {
+  var el = document.getElementById('log');
+  el.textContent = msg + '\n' + el.textContent;
+}
+
+document.querySelectorAll('#panel button').forEach(function (btn) {
+  btn.addEventListener('click', function () { startChoice(btn.dataset.case); });
+});
+
+/* 真实游戏里由引擎每帧调用，这里用定时器模拟 */
+setInterval(function () { choiceWin.update(); }, 100);
+
+/* =========================================================
+ * 自动演示：?auto=1 直接弹出聊天框；?auto=confirm 再模拟输入一次
+ * ========================================================= */
+var params = new URLSearchParams(location.search);
+var auto = params.get('auto');
+
+function fakeType(text) {
+  var input = document.getElementById('tt-chat-input');
+  if (!input) return false;
+  input.value = text;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  return true;
+}
+
+if (auto) {
+  setTimeout(function () { startChoice(params.get('case') || 'three'); }, 400);
+
+  if (auto === 'confirm' || auto === 'apply' || auto === 'chip') {
+    setTimeout(function () {
+      if (auto === 'chip') {
+        var chip = document.querySelector('#tt-chat-root span[data-index="0"]');
+        if (chip) chip.click();
+        else fakeType('答应他吧');
+      } else {
+        fakeType('答应他吧');
+      }
+    }, 1400);
+  }
+
+  if (auto === 'apply') {
+    setTimeout(function () { fakeType(''); }, 2000);
+  }
+
+  // 候选：有部分匹配但置信度不够
+  if (auto === 'cand') {
+    setTimeout(function () { fakeType('向左还是向右'); }, 1400);
+  }
+
+  // 完全无关：连续两次没听懂，触发升级提示
+  if (auto === 'fail') {
+    setTimeout(function () { fakeType('今天天气怎么样'); }, 1400);
+    setTimeout(function () { fakeType('这个嘛'); }, 2000);
+  }
+}
+
+/* 布局演示：?layout=top 把聊天框预置到顶部并缩小（也可 normal/reset） */
+var layoutParam = params.get('layout');
+if (layoutParam) {
+  try {
+    if (layoutParam === 'reset') localStorage.removeItem('TT_ChatChoiceLayout');
+    else {
+      var saved = layoutParam === 'top'
+        ? { left: 30, top: 6, width: 430, height: 118 }
+        : { left: 30, top: 6, width: 430, height: 118 };
+      localStorage.setItem('TT_ChatChoiceLayout', JSON.stringify(saved));
+    }
+  } catch (e) { /* ignore */ }
+}
+</script>
+
+<!-- 被测插件 -->
+<script src="../js/plugins/TT_ChatChoice.js"></script>
+<script>
+/* 大模型通道演示：
+ *   ?api=1&endpoint=http://127.0.0.1:8123/v1/chat/completions
+ *   ?auto=llm   （自动输入一句本地匹配不了的，验证走大模型）
+ * 本地起模拟接口：node tools/mock-llm-server.mjs
+ */
+(function () {
+  var p = new URLSearchParams(location.search);
+  var TT = window.TT_ChatChoice;
+  if (TT && p.get('api') === '1') {
+    TT.CONFIG.api.enabled = true;
+    TT.CONFIG.api.key = 'sk-mock-local';
+    if (p.get('endpoint')) TT.CONFIG.api.endpoint = p.get('endpoint');
+    if (p.get('model')) TT.CONFIG.api.model = p.get('model');
+  }
+  if (p.get('auto') === 'llm') {
+    setTimeout(function () {
+      var input = document.getElementById('tt-chat-input');
+      if (!input) return;
+      input.value = '就听那个便宜的吧';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    }, 1400);
+  }
+  if (p.get('selftest') === '1' && TT) {
+    setInterval(function () {
+      var h = document.querySelector('h1');
+      TT.testAPI().then(function (r) {
+        h.textContent = 'SELFTEST OK ' + JSON.stringify(r);
+      }, function (e) {
+        h.textContent = 'SELFTEST ERR ' + e.message;
+      });
+    }, 1200);
+  }
+})();
+</script>
+</body>
+</html>

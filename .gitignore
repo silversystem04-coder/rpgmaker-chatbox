@@ -1,0 +1,12 @@
+# 依赖（项目本身零依赖，这个只是防止误提交）
+node_modules/
+
+# 自己的 API key（只有 example 会进仓库）
+js/plugins/TT_ChatChoice.key.js
+*.key.js
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+thumbs.db
