@@ -105,3 +105,12 @@ $s.Dispose()
 | m7 CI+片尾 | 9.65 | `assets/m7_ci.png` + 右侧片尾卡（GitHub URL / 49 项测试 / MIT） |
 
 分段中间文件在 `assets/seg_*.mp4`、`assets/_film/`，都不进 git。
+
+## 封面
+
+```bash
+python video/make_cover.py     # 出 assets/cover.png（1920×1080）与 cover.jpg
+```
+
+版式与成片同色系（深色 #0d1117 + 青绿 #2EE6A8），左侧标语 + 三个徽章 + GitHub 地址，
+右侧贴 OMORI 真机截图（`shots/omori-chat2.png`）。改标题/字号/配色直接改 `make_cover.py` 顶部常量。
