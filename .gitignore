@@ -10,3 +10,8 @@ js/plugins/TT_ChatChoice.key.js
 *.log
 .DS_Store
 thumbs.db
+
+# video intermediate output
+video/assets/m3_desktop_raw.mp4
+video/assets/frames_*/
+video/assets/m3_ffmpeg.*
