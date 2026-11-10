@@ -109,7 +109,8 @@ $s.Dispose()
 ## 封面
 
 ```bash
-python video/make_cover.py     # 出 assets/cover.png（1920×1080）与 cover.jpg
+python video/make_cover.py     # 16:9 → assets/cover.png（1920×1080）与 cover.jpg
+python video/make_cover_43.py  # 4:3  → assets/cover_4x3.png（1600×1200）与 cover_4x3.jpg
 ```
 
 版式与成片同色系（深色 #0d1117 + 青绿 #2EE6A8），左侧标语 + 三个徽章 + GitHub 地址，
