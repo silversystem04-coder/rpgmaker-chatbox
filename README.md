@@ -8,6 +8,13 @@
 
 > 铁律：**不静默替玩家选**。没把握就不猜，让玩家走原路。
 
+## 下载
+
+- **最新发布（插件 zip / 演示视频 / 封面）**：<https://github.com/silversystem04-coder/rpgmaker-chatbox/releases/latest>
+- 直接下插件包：<https://github.com/silversystem04-coder/rpgmaker-chatbox/releases/latest/download/rpgmaker-chatbox.zip>
+- 演示视频：<https://github.com/silversystem04-coder/rpgmaker-chatbox/releases/latest/download/tt_chatchoice_film.mp4>
+
+
 ## 截图
 
 | 打开聊天框 | 匹配 + 确认 | 确认后游戏继续 |
